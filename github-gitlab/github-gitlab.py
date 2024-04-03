@@ -9,6 +9,7 @@ df = pd.read_excel('./github-gitlab/github-to-gitlab.xlsx')
 
 github_token = os.getenv('GITHUB_TOKEN')
 gitlab_token = os.getenv('GITLAB_TOKEN')
+
 print("")
 # repo_path = input("Enter the gitlab project path for storing the Migration Logs [gitlab_namespace/project_name]: ")
 repo_path = os.getenv('GITLAB_LOG_PROJECT_PATH')
@@ -120,6 +121,21 @@ for index, row in df.iterrows():
             github_size= f'{repo_size:.2f} MB'
         else:
             print(f'Error fetching github repository information: {response.status_code} {response.text}')
+
+        #GitHub Tags Count
+        print(f"Source Repository - {repo_name_to_import} Tag validation is in progress...")
+        url_1 = f'https://api.github.com/repos/{github_username}/{repo_name_to_import}/tags'
+        headers_1 = {'Authorization': f'Bearer {github_token}'}
+
+        response = requests.get(url_1, headers=headers_1)
+        if response.status_code == 200:
+            tags = response.json()
+            total_tags = len(tags)
+        else:
+            print(f'Request failed with status code {response.status_code} \n {response.text}')
+            break
+        github_tags=total_tags
+
         ## Gitlab Branches Count
         print(f"Target Repository - {repo_name_to_import} branch validation is in progress...")
         path=f"{gitlab_target_namespace}/{repo_name_to_import}"
@@ -134,6 +150,23 @@ for index, row in df.iterrows():
         else:
             print(f'Request failed with status code {response.status_code} \n {response.text}')
         gitlab_branches=total_branches_2
+        time.sleep(15)
+
+        ## Gitlab Tags Count
+        print(f"Target Repository - {repo_name_to_import} Tag validation is in progress...")
+        path=f"{gitlab_target_namespace}/{repo_name_to_import}"
+        encoded_path= quote(path,safe='')
+        url_8 = f'https://gitlab.com/api/v4/projects/{encoded_path}/repository/tags'
+        headers_8 = {'PRIVATE-TOKEN': gitlab_token}
+
+        response = requests.get(url_8, headers=headers_8)
+
+        if response.status_code == 200:
+            tag8 = response.json()
+            total_tag8 = len(tag8)
+        else:
+            print(f'Request failed with status code {response.status_code} \n {response.text}')
+        gitlab_tags=total_tag8
         time.sleep(15)
 
         ##GitLab Commit Count
@@ -201,7 +234,20 @@ for index, row in df.iterrows():
             print(f"Commit Count are not same for both the repository {repo_name_to_import}.")
             print("")
             print("")
-        validation_data.append([github_username,repo_name_to_import,gitlab_target_namespace,github_branches,gitlab_branches,github_comit_count,gitlab_commit_count,github_size,gitlab_size])
+        if github_tags==gitlab_tags :
+            print("")
+            print("********************Tags Validation Done********************")
+            print("")
+            print(f"Tag Count are same for both the repository {repo_name_to_import} i.e {gitlab_tags}.")
+            print("")
+            print("")
+        else:
+            print("")
+            print("********************Commit Validation Done********************")
+            print(f"Tag Count are not same for both the repository {repo_name_to_import}.")
+            print("")
+            print("")
+        validation_data.append([github_username,repo_name_to_import,gitlab_target_namespace,github_branches,gitlab_branches,github_comit_count,gitlab_commit_count,github_size,gitlab_size,github_tags,gitlab_tags])
 
     else:
         error_message =f"Error occurred while importing {repo_name_to_import} from GitHub to GitLab with status code: {import_response.status_code} \n {import_response.text}"
@@ -219,7 +265,7 @@ failure_df = pd.DataFrame(failure_data, columns=['Repository Name', 'Status Code
 failure_df.index =failure_df.index+1
 failure_df.to_csv('failure.csv', index_label='Sr')
 # Create validation_data.csv
-validation_df = pd.DataFrame(validation_data, columns=['Source Github Username', 'Source Github Repository Name', 'Target Gitlab Namespace','Source Branches','Target Branches','Source Commits','Target Commits','Source Repo Size','Target Repo Size'])
+validation_df = pd.DataFrame(validation_data, columns=['Source Github Username', 'Source Github Repository Name', 'Target Gitlab Namespace','Source Branches','Target Branches','Source Commits','Target Commits','Source Repo Size','Target Repo Size','github tags','gitlab tags'])
 validation_df.index =validation_df.index+1
 validation_df.to_csv('validation-data.csv', index_label='Sr')
 print("")
