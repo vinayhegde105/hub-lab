@@ -11,7 +11,8 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git credentialsId: 'SCM_MIGRATOR_CRED', branch: 'main', url: '${SCM_MIGRATOR_SOURCE_CODE}'
+                // git credentialsId: 'SCM_MIGRATOR_CRED', branch: 'main', url: '${SCM_MIGRATOR_SOURCE_CODE}'
+                git branch: 'main', url: 'https://github.com/vinayhegde105/hub-lab.git'
             }
         }
         
